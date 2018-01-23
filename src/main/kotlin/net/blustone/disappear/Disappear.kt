@@ -2,11 +2,9 @@ package net.blustone.disappear
 
 import net.dv8tion.jda.core.AccountType
 import net.dv8tion.jda.core.JDABuilder
-import net.dv8tion.jda.core.Permission
 import net.dv8tion.jda.core.entities.TextChannel
 import net.dv8tion.jda.core.events.ReadyEvent
 import net.dv8tion.jda.core.hooks.EventListener
-import net.dv8tion.jda.core.utils.PermissionUtil
 import java.util.prefs.Preferences
 import javax.security.auth.login.LoginException
 
@@ -35,12 +33,18 @@ class Disappear {
         private var token: String? = null
 
         private fun TextChannel.deleteAllMessages() {
+            pl("Retrieving messages from #$name in ${guild.name}...")
             val mh = history
+            var ct = 0
             while (true) {
                 val retrieved = mh.retrievePast(100).complete()
                 if (retrieved == null || retrieved.isEmpty()) break
+                ct += retrieved.size
+                pb()
+                pl("Retrieving messages from #$name in ${guild.name}: $ct messages")
             }
             val h = mh.retrievedHistory.filter { it.author == jda.selfUser }
+            pb()
             pl("Messages successfully retrieved from #$name in ${guild.name}: ${h.size}")
             var delet = 0
             for (l in h) {
