@@ -22,11 +22,7 @@ class Disappear {
 
         private fun pb() = repeat(lastLine) { print('\b') }
 
-        private fun resp(default: String = "y"): String {
-            var r: String
-            do r = readLine() ?: default while (r != "y" || r != "n")
-            return r
-        }
+        private fun resp(default: String = "y") = readLine() ?: default
 
         private val prefs = Preferences.userNodeForPackage(Disappear::class.java)
 
@@ -67,14 +63,14 @@ class Disappear {
             // Request token
             token = prefs.get("token", null)
             if (token == null) {
-                println("No token found in preferences, please enter one: ")
+                print("No token found in preferences, please enter one: ")
                 var t = readLine()
                 while (t.isNullOrBlank()) {
                     t = readLine()
                 }
                 token = t
             } else {
-                println("Token found in preferences, would you like to use it? (Y/n) ")
+                print("Token found in preferences, would you like to use it? (Y/n) ")
                 val r = resp("y")
                 when (r) {
                     "n" -> {
@@ -92,6 +88,8 @@ class Disappear {
                     .addEventListener(EventListener {
                         when (it) {
                             is ReadyEvent -> {
+                                prefs.put("token", token)
+                                prefs.flush()
                                 println("Ready!")
                                 println("Logged in as ${it.jda.selfUser.name}!")
                                 println("Starting...")
@@ -107,15 +105,17 @@ class Disappear {
                     })
             while (true) {
                 try {
+                    println("Building JDA instance...")
                     jdaBuilder.buildBlocking()
                     break
                 } catch (e: LoginException) {
                     println("Error with credentials: ${e.message}")
-                    println("Please enter a token: ")
+                    print("Please enter a token: ")
                     var t = readLine()
                     while (t.isNullOrBlank()) {
                         t = readLine()
                     }
+                    token = t
                     jdaBuilder.setToken(t)
                     continue
                 }
