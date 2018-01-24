@@ -2,11 +2,14 @@ package net.blustone.disappear
 
 import net.dv8tion.jda.core.AccountType
 import net.dv8tion.jda.core.JDABuilder
+import net.dv8tion.jda.core.Permission
 import net.dv8tion.jda.core.entities.TextChannel
 import net.dv8tion.jda.core.events.ReadyEvent
 import net.dv8tion.jda.core.hooks.EventListener
+import net.dv8tion.jda.core.utils.PermissionUtil
 import java.util.prefs.Preferences
 import javax.security.auth.login.LoginException
+import kotlin.system.exitProcess
 
 class Disappear {
 
@@ -29,6 +32,12 @@ class Disappear {
         private var token: String? = null
 
         private fun TextChannel.deleteAllMessages() {
+            val perms = Permission.getPermissions(PermissionUtil.getEffectivePermission(this, guild.selfMember))
+            if (!perms.contains(Permission.VIEW_CHANNEL) || !perms.contains(Permission.MESSAGE_READ)) {
+                pl("No permissions to manage #$name in ${guild.name}, skipping...")
+                println()
+                return
+            }
             pl("Retrieving messages from #$name in ${guild.name}...")
             val mh = history
             var ct = 0
@@ -100,6 +109,8 @@ class Disappear {
                                         it.deleteAllMessages()
                                     }
                                 }
+                                println("Done")
+                                exitProcess(0)
                             }
                         }
                     })
