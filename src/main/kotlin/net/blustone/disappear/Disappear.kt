@@ -25,7 +25,21 @@ class Disappear {
 
         private fun pb() = repeat(lastLine) { print('\b') }
 
-        private fun resp(default: String = "y") = readLine() ?: default
+        private fun resp(text: String, choices: Map<Char, String> = mapOf('y' to "yes", 'n' to "no"), default: Char = 'y'): Char {
+            print(text)
+            print(" (")
+            print(default.toUpperCase())
+            choices.filter { it.key != default }.forEach { print(it.key) }
+            print(") ")
+            print(choices.asSequence().joinToString(", ") { "${it.key}=${it.value}" })
+            print(' ')
+            var response = readLine()
+            while (response != null && response.length > 1) {
+                print("Invalid response, try again: ")
+                response = readLine()
+            }
+            return response?.firstOrNull() ?: default
+        }
 
         private val prefs = Preferences.userNodeForPackage(Disappear::class.java)
 
@@ -79,10 +93,8 @@ class Disappear {
                 }
                 token = t
             } else {
-                print("Token found in preferences, would you like to use it? (Y/n) ")
-                val r = resp("y")
-                when (r) {
-                    "n" -> {
+                when (resp("Token found in preferences, would you like to use it?")) {
+                    'n' -> {
                         println("Please enter a token: ")
                         var t = readLine()
                         while (t.isNullOrBlank()) {
@@ -104,9 +116,22 @@ class Disappear {
                                 println("Starting...")
                                 val jda = it.jda
                                 val guilds = jda.guilds
-                                guilds.forEach {
-                                    it.textChannels.forEach {
-                                        it.deleteAllMessages()
+                                when (resp("Delete from all guilds or filter manually?", mapOf('a' to "all", 'f' to "filter"), 'a')) {
+                                    'a' -> {
+                                        guilds.forEach {
+                                            it.textChannels.forEach {
+                                                it.deleteAllMessages()
+                                            }
+                                        }
+                                    }
+                                    'f' -> {
+                                        guilds.forEach {
+                                            if (resp("Purge ${it.name}?") == 'y') {
+                                                it.textChannels.forEach {
+                                                    it.deleteAllMessages()
+                                                }
+                                            }
+                                        }
                                     }
                                 }
                                 println("Done")
