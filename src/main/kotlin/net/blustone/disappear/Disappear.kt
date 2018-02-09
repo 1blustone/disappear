@@ -3,6 +3,7 @@ package net.blustone.disappear
 import net.dv8tion.jda.core.AccountType
 import net.dv8tion.jda.core.JDABuilder
 import net.dv8tion.jda.core.Permission
+import net.dv8tion.jda.core.entities.PrivateChannel
 import net.dv8tion.jda.core.entities.TextChannel
 import net.dv8tion.jda.core.events.ReadyEvent
 import net.dv8tion.jda.core.hooks.EventListener
@@ -81,6 +82,37 @@ class Disappear {
             println()
         }
 
+        private fun PrivateChannel.deleteAllMessages() {
+            val dn = "@${user.name}#${user.discriminator}"
+            pl("Retrieving messages from $dn...")
+            val mh = history
+            var ct = 0
+            while (true) {
+                val retrieved = mh.retrievePast(100).complete()
+                if (retrieved == null || retrieved.isEmpty()) break
+                ct += retrieved.size
+                pb()
+                pl("Retrieving messages from $dn: $ct messages")
+            }
+            val h = mh.retrievedHistory.filter { it.author == jda.selfUser }
+            pb()
+            pl("Messages successfully retrieved from $dn: ${h.size}")
+            var delet = 0
+            for (l in h) {
+                try {
+                    l.delete().complete(true)
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+                delet += 1
+                pb()
+                pl("Messages deleted from $dn: $delet/${h.size}")
+            }
+            pb()
+            pl("Deleted all ${h.size} messages in $dn!")
+            println()
+        }
+
         @JvmStatic
         fun main(args: Array<String>) {
             // Request token
@@ -130,6 +162,20 @@ class Disappear {
                                                 it.textChannels.forEach {
                                                     it.deleteAllMessages()
                                                 }
+                                            }
+                                        }
+                                    }
+                                }
+                                when (resp("Delete from all DMs or filter manually?", mapOf('a' to "all", 'f' to "filter"), 'a')) {
+                                    'a' -> {
+                                        jda.privateChannels.forEach {
+                                            it.deleteAllMessages()
+                                        }
+                                    }
+                                    'f' -> {
+                                        jda.privateChannels.forEach {
+                                            if (resp("Purge ${it.name}?") == 'y') {
+                                                it.deleteAllMessages()
                                             }
                                         }
                                     }
