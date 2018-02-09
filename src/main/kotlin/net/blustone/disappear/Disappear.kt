@@ -14,6 +14,10 @@ import kotlin.system.exitProcess
 
 class Disappear {
 
+    enum class Strategy {
+        EAGER, LAZY
+    }
+
     companion object {
 
         private var lastLine = 0
@@ -46,7 +50,7 @@ class Disappear {
 
         private var token: String? = null
 
-        private fun TextChannel.deleteAllMessages() {
+        private fun TextChannel.deleteAllMessages(strategy: Strategy) {
             val perms = Permission.getPermissions(PermissionUtil.getEffectivePermission(this, guild.selfMember))
             if (!perms.contains(Permission.VIEW_CHANNEL) || !perms.contains(Permission.MESSAGE_READ)) {
                 pl("No permissions to manage #$name in ${guild.name}, skipping...")
@@ -56,9 +60,20 @@ class Disappear {
             pl("Retrieving messages from #$name in ${guild.name}...")
             val mh = history
             var ct = 0
+            var delet = 0
             while (true) {
                 val retrieved = mh.retrievePast(100).complete()
                 if (retrieved == null || retrieved.isEmpty()) break
+                if (strategy == Strategy.LAZY) for (m in retrieved.filter { it.author == jda.selfUser }) {
+                    try {
+                        m.delete().complete(true)
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                    delet += 1
+                    pb()
+                    pl("Messages deleted from #$name in ${guild.name}: $delet")
+                }
                 ct += retrieved.size
                 pb()
                 pl("Retrieving messages from #$name in ${guild.name}: $ct messages")
@@ -66,47 +81,61 @@ class Disappear {
             val h = mh.retrievedHistory.filter { it.author == jda.selfUser }
             pb()
             pl("Messages successfully retrieved from #$name in ${guild.name}: ${h.size}")
-            var delet = 0
-            for (l in h) {
-                try {
-                    l.delete().complete(true)
-                } catch (e: Exception) {
-                    e.printStackTrace()
+
+            if (strategy == Strategy.EAGER) {
+                for (l in h) {
+                    try {
+                        l.delete().complete(true)
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                    delet += 1
+                    pb()
+                    pl("Messages deleted from #$name in ${guild.name}: $delet/${h.size}")
                 }
-                delet += 1
-                pb()
-                pl("Messages deleted from #$name in ${guild.name}: $delet/${h.size}")
             }
             pb()
             pl("Deleted all ${h.size} messages in #$name in ${guild.name}!")
             println()
         }
 
-        private fun PrivateChannel.deleteAllMessages() {
+        private fun PrivateChannel.deleteAllMessages(strategy: Strategy) {
             val dn = "@${user.name}#${user.discriminator}"
             pl("Retrieving messages from $dn...")
             val mh = history
             var ct = 0
+            var delet = 0
             while (true) {
                 val retrieved = mh.retrievePast(100).complete()
                 if (retrieved == null || retrieved.isEmpty()) break
                 ct += retrieved.size
+                if (strategy == Strategy.LAZY) for (m in retrieved.filter { it.author == jda.selfUser }) {
+                    try {
+                        m.delete().complete(true)
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                    delet += 1
+                    pb()
+                    pl("Messages deleted from #$name in $dn: $delet")
+                }
                 pb()
                 pl("Retrieving messages from $dn: $ct messages")
             }
             val h = mh.retrievedHistory.filter { it.author == jda.selfUser }
             pb()
             pl("Messages successfully retrieved from $dn: ${h.size}")
-            var delet = 0
-            for (l in h) {
-                try {
-                    l.delete().complete(true)
-                } catch (e: Exception) {
-                    e.printStackTrace()
+            if (strategy == Strategy.EAGER) {
+                for (l in h) {
+                    try {
+                        l.delete().complete(true)
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                    delet += 1
+                    pb()
+                    pl("Messages deleted from $dn: $delet/${h.size}")
                 }
-                delet += 1
-                pb()
-                pl("Messages deleted from $dn: $delet/${h.size}")
             }
             pb()
             pl("Deleted all ${h.size} messages in $dn!")
@@ -148,11 +177,16 @@ class Disappear {
                                 println("Starting...")
                                 val jda = it.jda
                                 val guilds = jda.guilds
+                                val strategy = when (resp("Select a retrieval strategy", mapOf('l' to "lazy", 'e' to "eager"), 'e')) {
+                                    'l' -> Strategy.LAZY
+                                    'e' -> Strategy.EAGER
+                                    else -> throw RuntimeException()
+                                }
                                 when (resp("Delete from all guilds or filter manually?", mapOf('a' to "all", 'f' to "filter"), 'a')) {
                                     'a' -> {
                                         guilds.forEach {
                                             it.textChannels.forEach {
-                                                it.deleteAllMessages()
+                                                it.deleteAllMessages(strategy)
                                             }
                                         }
                                     }
@@ -160,7 +194,7 @@ class Disappear {
                                         guilds.forEach {
                                             if (resp("Purge ${it.name}?") == 'y') {
                                                 it.textChannels.forEach {
-                                                    it.deleteAllMessages()
+                                                    it.deleteAllMessages(strategy)
                                                 }
                                             }
                                         }
@@ -169,13 +203,13 @@ class Disappear {
                                 when (resp("Delete from all DMs or filter manually?", mapOf('a' to "all", 'f' to "filter"), 'a')) {
                                     'a' -> {
                                         jda.privateChannels.forEach {
-                                            it.deleteAllMessages()
+                                            it.deleteAllMessages(strategy)
                                         }
                                     }
                                     'f' -> {
                                         jda.privateChannels.forEach {
                                             if (resp("Purge ${it.name}?") == 'y') {
-                                                it.deleteAllMessages()
+                                                it.deleteAllMessages(strategy)
                                             }
                                         }
                                     }
