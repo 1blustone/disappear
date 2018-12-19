@@ -182,30 +182,18 @@ class Disappear {
                                     'e' -> Strategy.EAGER
                                     else -> throw RuntimeException()
                                 }
-                                when (resp("Delete from all guilds or filter manually?", mapOf('a' to "all", 'f' to "filter"), 'a')) {
-                                    'a' -> {
-                                        guilds.forEach {
-                                            it.textChannels.forEach {
-                                                it.deleteAllMessages(strategy)
-                                            }
-                                        }
-                                    }
+                                when (resp("Select a guild deletion strategy", mapOf('n' to "none", 'a' to "all", 'f' to "filter"), 'a')) {
+                                    'a' -> guilds.forEach { it.textChannels.forEach { it.deleteAllMessages(strategy) } }
                                     'f' -> {
                                         guilds.forEach {
                                             if (resp("Purge ${it.name}?") == 'y') {
-                                                it.textChannels.forEach {
-                                                    it.deleteAllMessages(strategy)
-                                                }
+                                                it.textChannels.forEach { it.deleteAllMessages(strategy) }
                                             }
                                         }
                                     }
                                 }
-                                when (resp("Delete from all DMs or filter manually?", mapOf('a' to "all", 'f' to "filter"), 'a')) {
-                                    'a' -> {
-                                        jda.privateChannels.forEach {
-                                            it.deleteAllMessages(strategy)
-                                        }
-                                    }
+                                when (resp("Select a DM deletion strategy", mapOf('n' to "none", 'a' to "all", 'f' to "filter"), 'a')) {
+                                    'a' -> jda.privateChannels.forEach { it.deleteAllMessages(strategy) }
                                     'f' -> {
                                         jda.privateChannels.forEach {
                                             if (resp("Purge ${it.name}?") == 'y') {
