@@ -3,6 +3,7 @@ package net.blustone.disappear
 import net.dv8tion.jda.core.AccountType
 import net.dv8tion.jda.core.JDABuilder
 import net.dv8tion.jda.core.Permission
+import net.dv8tion.jda.core.entities.Guild
 import net.dv8tion.jda.core.entities.PrivateChannel
 import net.dv8tion.jda.core.entities.TextChannel
 import net.dv8tion.jda.core.events.ReadyEvent
@@ -142,6 +143,17 @@ class Disappear {
             println()
         }
 
+        private fun Guild.deleteAllMessages(strategy: Strategy) {
+            when (resp("Select a channel deletion strategy", mapOf('a' to "all", 'f' to "filter"), 'a')) {
+                'a' -> textChannels.forEach { it.deleteAllMessages(strategy) }
+                'f' -> {
+                    textChannels.forEach {
+                        if (resp("Purge #${it.name} in $name?") == 'y') it.deleteAllMessages(strategy)
+                    }
+                }
+            }
+        }
+
         @JvmStatic
         fun main(args: Array<String>) {
             // Request token
@@ -183,14 +195,8 @@ class Disappear {
                                     else -> throw RuntimeException()
                                 }
                                 when (resp("Select a guild deletion strategy", mapOf('n' to "none", 'a' to "all", 'f' to "filter"), 'a')) {
-                                    'a' -> guilds.forEach { it.textChannels.forEach { it.deleteAllMessages(strategy) } }
-                                    'f' -> {
-                                        guilds.forEach {
-                                            if (resp("Purge ${it.name}?") == 'y') {
-                                                it.textChannels.forEach { it.deleteAllMessages(strategy) }
-                                            }
-                                        }
-                                    }
+                                    'a' -> guilds.forEach { it.deleteAllMessages(strategy) }
+                                    'f' -> guilds.forEach { if (resp("Purge ${it.name}?") == 'y') it.deleteAllMessages(strategy) }
                                 }
                                 when (resp("Select a DM deletion strategy", mapOf('n' to "none", 'a' to "all", 'f' to "filter"), 'a')) {
                                     'a' -> jda.privateChannels.forEach { it.deleteAllMessages(strategy) }
